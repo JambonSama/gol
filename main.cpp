@@ -156,7 +156,10 @@ void run() {
                         win.setView(render_view);
                     }
                 }
-                 break;
+                break;
+            case sf::Event::Resized:
+                render_view.setSize(ev.size.width, ev.size.height);
+                break;
             default:
                 break;
             }
