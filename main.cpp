@@ -69,7 +69,10 @@ namespace {
     sf::Text text;
     sf::RectangleShape text_bg;
 
-    // max 32 ones (1) in the model definition (or change the size of the "model[32]" array in the spawn.frag shader)
+    const int MAX_MODEL_SIZE = 32; // CHECK WITH SHADER!!
+
+    // max 32 (MAX_MODEL_SIZE) ones (1) in the model definition
+    // (or change the size of the "model[32]" array in the spawn.frag shader)
     const std::vector<ModelInfo> models = {
         // name, size, data
         {"glider1", {4,3},{
@@ -90,6 +93,13 @@ namespace {
 void init_models() {
     for(const ModelInfo& entry: models) {
         printf("compiling model '%s' : ", entry.name.c_str());
+
+        if (entry.data.size() != entry.size.x*entry.size.y) {
+            printf("ERROR (skipping model): Wrong model size: %d != %dx%d\n", entry.data.size(), entry.size.x, entry.size.y);
+            compiled_models.push_back({}); // push an empty vector so we don't mess up indices
+            continue;
+        }
+
         int x = 0, y = 0;
         std::vector<sf::Vector2f> compiled_model;
         for(int n = 0; n < entry.data.size(); n++) {
@@ -103,6 +113,11 @@ void init_models() {
             } else {
                 x++;
             }
+        }
+        if (compiled_model.size() > MAX_MODEL_SIZE) {
+            printf("ERROR (skipping model): Too many points : %d > %d\n", compiled_model.size(), MAX_MODEL_SIZE);
+            compiled_models.push_back({});
+            continue;
         }
         compiled_models.push_back(compiled_model);
         printf("%d points\n", compiled_model.size());
@@ -344,13 +359,22 @@ void run() {
         win.draw(text);
 
         for(int i = 0; i < models.size(); i++) {
-            if(current_model == i) text.setFillColor(sf::Color::Green); else text.setFillColor(sf::Color::White);
+            if(current_model == i) {
+                text.setOutlineColor(sf::Color::Green);
+                text.setOutlineThickness(1);
+            }
+            else {
+                text.setOutlineThickness(0);
+            }
+            if(compiled_models[i].empty()) text.setFillColor(sf::Color::Red);
             text.move(0,text.getCharacterSize());
             char buffer[32];
             sprintf(buffer, "  %s", models[i].name.c_str());
             text.setString(buffer);
             win.draw(text);
         }
+
+        text.setOutlineThickness(0);
 
 
         if(run_update) {
