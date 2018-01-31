@@ -31,6 +31,7 @@ namespace {
 
     sf::View update_view;
     sf::View render_view;
+    sf::View default_view;
 
     sf::Vector2f drag_start;
 
@@ -128,6 +129,8 @@ void init() {
     text_bg.setSize({100, text.getCharacterSize()*(DRAW__COUNT + 3)});
     text_bg.setPosition(0,0);
     text_bg.setFillColor(sf::Color(128,128,128, 240));
+
+    default_view = win.getDefaultView();
 }
 
 void run() {
@@ -206,6 +209,8 @@ void run() {
                 break;
             case sf::Event::Resized:
                 render_view.setSize(ev.size.width, ev.size.height);
+                //default_view.setSize(ev.size.width, ev.size.height);
+                default_view.reset({0,0,ev.size.width, ev.size.height});
                 break;
             default:
                 break;
@@ -238,7 +243,7 @@ void run() {
         win.draw(sprite, &render_shader);
 
 
-        win.setView(win.getDefaultView());
+        win.setView(default_view);
         win.draw(text_bg);
         if(draw_type == DRAW_POINT) text.setFillColor(sf::Color::Green); else text.setFillColor(sf::Color::White);
         text.setPosition(5,0);
