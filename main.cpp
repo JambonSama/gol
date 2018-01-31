@@ -2,6 +2,10 @@
 #include <SFML/Graphics.hpp>
 #include <random>
 #include <algorithm>
+#include <vector>
+#include <map>
+#include <tuple>
+#include <string>
 
 //using namespace std;
 
@@ -9,7 +13,18 @@ enum DRAW_TYPE {
     DRAW_POINT = 1,
     DRAW_RANDOM = 2,
     DRAW_CLEAR = 3,
+    DRAW_MODEL = 4,
     DRAW__COUNT
+};
+
+struct Size {
+    int x,y;
+};
+
+struct ModelInfo {
+    std::string name;
+    Size size;
+    std::vector<char> data;
 };
 
 namespace {
@@ -46,11 +61,52 @@ namespace {
     bool do_update = false;
     bool run_update = false;
 
+    int current_model = 0;
+
     sf::Clock sfclock;
 
     sf::Font font;
     sf::Text text;
     sf::RectangleShape text_bg;
+
+    // max 32 ones (1) in the model definition (or change the size of the "model[32]" array in the spawn.frag shader)
+    const std::vector<ModelInfo> models = {
+        // name, size, data
+        {"glider1", {4,3},{
+        0,0,1,0,
+        0,0,0,1,
+        0,1,1,1
+        }},
+        {"glider2", {4,3},{
+        0,1,1,1,
+        0,0,0,1,
+        0,0,1,0
+        }}
+    };
+
+    std::vector<std::vector<sf::Vector2f>> compiled_models;
+}
+
+void init_models() {
+    for(const ModelInfo& entry: models) {
+        printf("compiling model '%s' : ", entry.name.c_str());
+        int x = 0, y = 0;
+        std::vector<sf::Vector2f> compiled_model;
+        for(int n = 0; n < entry.data.size(); n++) {
+            if (entry.data[n] == 1) {
+                compiled_model.push_back({x,y});
+            }
+
+            if (x == entry.size.x - 1) {
+                x = 0;
+                y++;
+            } else {
+                x++;
+            }
+        }
+        compiled_models.push_back(compiled_model);
+        printf("%d points\n", compiled_model.size());
+    }
 }
 
 void init_world() {
@@ -126,11 +182,13 @@ void init() {
     text.setCharacterSize(14);
 
 
-    text_bg.setSize({100, text.getCharacterSize()*(DRAW__COUNT + 3)});
+    text_bg.setSize({100, text.getCharacterSize()*(DRAW__COUNT + models.size() + 3)});
     text_bg.setPosition(0,0);
     text_bg.setFillColor(sf::Color(128,128,128, 240));
 
     default_view = win.getDefaultView();
+
+    init_models();
 }
 
 void run() {
@@ -146,6 +204,7 @@ void run() {
                 switch(ev.key.code) {
                 case sf::Keyboard::N:
                     do_update = true;
+                    run_update = false;
                     break;
                 case sf::Keyboard::Q:
                     win.close();
@@ -165,17 +224,30 @@ void run() {
                 case sf::Keyboard::Num3:
                     draw_type = DRAW_CLEAR;
                     break;
+                case sf::Keyboard::Num4:
+                    draw_type = DRAW_MODEL;
+                    break;
                 default:
                     break;
                 }
                 break;
             case sf::Event::MouseWheelScrolled:
-                if (ev.mouseWheel.x < 0) {
-                    render_view.zoom(1.1);
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
+                    if (ev.mouseWheel.x < 0) {
+                        current_model = (current_model + 1) % models.size();
+                    }
+                    else {
+                        current_model = (current_model - 1) % models.size();
+                    }
                 }
                 else {
-                    render_view.zoom(0.9);
-                }
+                    if (ev.mouseWheel.x < 0) {
+                        render_view.zoom(1.1);
+                    }
+                    else {
+                        render_view.zoom(0.9);
+                    }
+                    }
                 break;
 
             case sf::Event::MouseButtonPressed:
@@ -209,7 +281,6 @@ void run() {
                 break;
             case sf::Event::Resized:
                 render_view.setSize(ev.size.width, ev.size.height);
-                //default_view.setSize(ev.size.width, ev.size.height);
                 default_view.reset({0,0,ev.size.width, ev.size.height});
                 break;
             default:
@@ -218,6 +289,13 @@ void run() {
         }
 
         if (do_spawn) {
+
+            if (draw_type == DRAW_MODEL) {
+                const auto& model = compiled_models[current_model];
+                spawn_shader.setUniformArray("model", model.data(), model.size());
+                spawn_shader.setUniform("model_size", (int)model.size());
+                do_spawn = false;
+            }
             spawn_shader.setUniform("type", (int)draw_type);
             spawn_shader.setUniform("spawn", spawn_pos);
             spawn_shader.setUniform("T", sfclock.getElapsedTime().asSeconds());
@@ -259,6 +337,21 @@ void run() {
         text.move(0,text.getCharacterSize());
         text.setString("3   : clear");
         win.draw(text);
+
+        if(draw_type == DRAW_MODEL) text.setFillColor(sf::Color::Green); else text.setFillColor(sf::Color::White);
+        text.move(0,text.getCharacterSize());
+        text.setString("4   : model");
+        win.draw(text);
+
+        for(int i = 0; i < models.size(); i++) {
+            if(current_model == i) text.setFillColor(sf::Color::Green); else text.setFillColor(sf::Color::White);
+            text.move(0,text.getCharacterSize());
+            char buffer[32];
+            sprintf(buffer, "  %s", models[i].name.c_str());
+            text.setString(buffer);
+            win.draw(text);
+        }
+
 
         if(run_update) {
              text.setFillColor(sf::Color::Green);
