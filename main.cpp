@@ -31,13 +31,14 @@ namespace {
     const bool USE_GL45 = false; // do not use yet, doesn't work!
 
     sf::RenderWindow win;
-    const int GAME_W = 1000, GAME_H = 1000;
+    const int GAME_W = 4096, GAME_H = 4096;
     sf::Sprite sprite;
     sf::RenderTexture *tex1 = nullptr, *tex2 = nullptr;
     sf::Texture *init_tex = nullptr;
 
+	const int PREVIEW_SCALE = 5;
     const int PREVIEW_MAX_STEP = 20;
-    const int PREVIEW_W = 16, PREVIEW_H = 16;
+    const int PREVIEW_W = 32, PREVIEW_H = 32;
     sf::RenderTexture *preview_tex1, *preview_tex2;
     sf::Sprite preview_sprite;
     bool do_preview = true;
@@ -77,22 +78,50 @@ namespace {
     sf::Text text;
     sf::RectangleShape text_bg;
 
-    const int MAX_MODEL_SIZE = 32; // CHECK WITH SHADER!!
+    const int MAX_MODEL_SIZE = 128; // CHECK WITH SHADER!!
 
     // max 32 (MAX_MODEL_SIZE) ones (1) in the model definition
     // (or change the size of the "model[32]" array in the spawn.frag shader)
     const std::vector<ModelInfo> models = {
         // name, size, data
-        {"glider1", {4,3},{
-        0,0,1,0,
-        0,0,0,1,
-        0,1,1,1
+        {"glider 1", {4,3},{
+			0,0,1,0,
+			0,0,0,1,
+			0,1,1,1
         }},
-        {"glider2", {4,3},{
-        0,1,1,1,
-        0,0,0,1,
-        0,0,1,0
-        }}
+        {"glider 2", {4,3},{
+			0,1,1,1,
+			0,0,0,1,
+			0,0,1,0
+        }},
+		{"puffer 1", {5,19},{
+			0,1,1,1,1,
+			1,0,0,0,1,
+			0,0,0,0,1,
+			1,0,0,1,0,
+			0,0,0,0,0,
+			0,0,0,0,0,
+			0,1,0,0,0,
+			0,0,1,0,0,
+			0,0,1,0,0,
+			0,1,1,0,0,
+			1,0,0,0,0,
+			0,0,0,0,0,
+			0,0,0,0,0,
+			0,0,0,0,0,
+			0,1,1,1,1,
+			1,0,0,0,1,
+			0,0,0,0,1,
+			1,0,0,1,0,
+			0,0,0,0,0
+		}},
+		{"diag puffer 1", {5,5},{
+			1,1,1,0,1,
+			1,0,0,0,0,
+			0,0,0,1,1,
+			0,1,1,0,1,
+			1,0,1,0,1
+		}}
     };
 
     std::vector<std::vector<sf::Vector2f>> compiled_models;
@@ -112,7 +141,7 @@ void init_models() {
         std::vector<sf::Vector2f> compiled_model;
         for(int n = 0; n < entry.data.size(); n++) {
             if (entry.data[n] == 1) {
-                compiled_model.push_back({x,y});
+                compiled_model.push_back({(float)x,(float)y});
             }
 
             if (x == entry.size.x - 1) {
@@ -178,7 +207,7 @@ void init() {
     tex1->create(GAME_W, GAME_H);
     tex2->create(GAME_W, GAME_H);
 
-    update_view.reset({0,GAME_H,GAME_W, -GAME_H});
+	update_view.reset({ 0.0,(float)GAME_H,(float)GAME_W, (float)(-GAME_H) });
 
     tex1->setView(update_view);
     tex2->setView(update_view);
@@ -210,7 +239,7 @@ void init() {
     text.setCharacterSize(14);
 
 
-    text_bg.setSize({100, text.getCharacterSize()*(DRAW__COUNT + models.size() + 3)});
+	text_bg.setSize({ 150.0, (float)(text.getCharacterSize()*(DRAW__COUNT + models.size() + 3)) });
     text_bg.setPosition(0,0);
     text_bg.setFillColor(sf::Color(128,128,128, 240));
 
@@ -243,7 +272,7 @@ void start_preview() {
     init_tex->update(data);
 
 
-    preview_view.reset({0,PREVIEW_H,PREVIEW_W, -PREVIEW_H});
+	preview_view.reset({ 0.0,(float)PREVIEW_H,(float)PREVIEW_W, (float)(-PREVIEW_H) });
 
     preview_sprite.setTexture(*init_tex);
     preview_sprite.setPosition(0,0);
@@ -293,7 +322,7 @@ void render_preview() {
         }
         preview_sprite.setTexture(preview_tex1->getTexture());
         preview_sprite.setPosition(10,200);
-        preview_sprite.setScale(10,10);
+        preview_sprite.setScale(PREVIEW_SCALE, PREVIEW_SCALE);
         win.setView(default_view);
         win.draw(preview_sprite, &render_shader);
     }
@@ -392,7 +421,7 @@ void run() {
                 break;
             case sf::Event::Resized:
                 render_view.setSize(ev.size.width, ev.size.height);
-                default_view.reset({0,0,ev.size.width, ev.size.height});
+				default_view.reset({ 0.0,0.0,(float)ev.size.width, (float)ev.size.height });
                 break;
             default:
                 break;

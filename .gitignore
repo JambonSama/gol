@@ -1,6 +1,10 @@
 # This file is used to ignore files which are generated
 # ----------------------------------------------------------------------------
 
+#########################
+# general file extensions
+#########################
+
 *~
 *.autosave
 *.a
@@ -35,17 +39,30 @@ Thumbs.db
 /.qmake.cache
 /.qmake.stash
 
+###########################
 # qtcreator generated files
+###########################
+
 *.pro.user*
 *.pro
 
+########################
 # xemacs temporary files
+########################
+
 *.flc
 
+#####################
 # Vim temporary files
+#####################
+
 .*.swp
 
+###############################
 # Visual Studio generated files
+###############################
+
+*.ipch
 *.ib_pdb_index
 *.idb
 *.ilk
@@ -59,12 +76,23 @@ Thumbs.db
 *.opensdf
 *.vcxproj
 *vcxproj.*
+*VC.db
+*VC.opendb
 
+**/Debug
+**/x64
+
+#######################
 # MinGW generated files
+#######################
+
 *.Debug
 *.Release
 
+##################
 # Python byte code
+##################
+
 *.pyc
 
 # Binaries
