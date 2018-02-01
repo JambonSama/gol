@@ -6,7 +6,9 @@
 #include <map>
 #include <tuple>
 #include <string>
+#include <experimental/filesystem>
 
+namespace fs = std::experimental::filesystem;
 //using namespace std;
 
 enum DRAW_TYPE {
@@ -25,6 +27,8 @@ struct ModelInfo {
     std::string name;
     Size size;
     std::vector<char> data;
+
+	ModelInfo(const std::string & image_file_path);
 };
 
 namespace {
@@ -38,7 +42,7 @@ namespace {
 
 	const int PREVIEW_SCALE = 5;
     const int PREVIEW_MAX_STEP = 20;
-    const int PREVIEW_W = 32, PREVIEW_H = 32;
+    const int PREVIEW_W = 16, PREVIEW_H = 16;
     sf::RenderTexture *preview_tex1, *preview_tex2;
     sf::Sprite preview_sprite;
     bool do_preview = true;
@@ -78,51 +82,52 @@ namespace {
     sf::Text text;
     sf::RectangleShape text_bg;
 
-    const int MAX_MODEL_SIZE = 128; // CHECK WITH SHADER!!
+    const int MAX_MODEL_SIZE = 2^9; // CHECK WITH SHADER!!
 
     // max 32 (MAX_MODEL_SIZE) ones (1) in the model definition
     // (or change the size of the "model[32]" array in the spawn.frag shader)
-    const std::vector<ModelInfo> models = {
-        // name, size, data
-        {"glider 1", {4,3},{
-			0,0,1,0,
-			0,0,0,1,
-			0,1,1,1
-        }},
-        {"glider 2", {4,3},{
-			0,1,1,1,
-			0,0,0,1,
-			0,0,1,0
-        }},
-		{"puffer 1", {5,19},{
-			0,1,1,1,1,
-			1,0,0,0,1,
-			0,0,0,0,1,
-			1,0,0,1,0,
-			0,0,0,0,0,
-			0,0,0,0,0,
-			0,1,0,0,0,
-			0,0,1,0,0,
-			0,0,1,0,0,
-			0,1,1,0,0,
-			1,0,0,0,0,
-			0,0,0,0,0,
-			0,0,0,0,0,
-			0,0,0,0,0,
-			0,1,1,1,1,
-			1,0,0,0,1,
-			0,0,0,0,1,
-			1,0,0,1,0,
-			0,0,0,0,0
-		}},
-		{"diag puffer 1", {5,5},{
-			1,1,1,0,1,
-			1,0,0,0,0,
-			0,0,0,1,1,
-			0,1,1,0,1,
-			1,0,1,0,1
-		}}
-    };
+	const std::vector<ModelInfo> models = { ModelInfo("models/ship 1.png"), ModelInfo("models/ship 2.png") };
+		//= {
+  //      // name, size, data
+  //      {"glider 1", {4,3},{
+		//	0,0,1,0,
+		//	0,0,0,1,
+		//	0,1,1,1
+  //      }},
+  //      {"glider 2", {4,3},{
+		//	0,1,1,1,
+		//	0,0,0,1,
+		//	0,0,1,0
+  //      }},
+		//{"puffer 1", {5,19},{
+		//	0,1,1,1,1,
+		//	1,0,0,0,1,
+		//	0,0,0,0,1,
+		//	1,0,0,1,0,
+		//	0,0,0,0,0,
+		//	0,0,0,0,0,
+		//	0,1,0,0,0,
+		//	0,0,1,0,0,
+		//	0,0,1,0,0,
+		//	0,1,1,0,0,
+		//	1,0,0,0,0,
+		//	0,0,0,0,0,
+		//	0,0,0,0,0,
+		//	0,0,0,0,0,
+		//	0,1,1,1,1,
+		//	1,0,0,0,1,
+		//	0,0,0,0,1,
+		//	1,0,0,1,0,
+		//	0,0,0,0,0
+		//}},
+		//{"diag puffer 1", {5,5},{
+		//	1,1,1,0,1,
+		//	1,0,0,0,0,
+		//	0,0,0,1,1,
+		//	0,1,1,0,1,
+		//	1,0,1,0,1
+		//}}
+  //  };
 
     std::vector<std::vector<sf::Vector2f>> compiled_models;
 }
@@ -530,9 +535,35 @@ void run() {
     }
 }
 
-int main()
-{
+int main() {
     init();
     run();
     return 0;
+}
+
+ModelInfo::ModelInfo(const std::string & image_file_path) {
+	fs::path path = image_file_path;
+	if (fs::exists(path)) {
+		// loading image
+		sf::Image img;
+		img.loadFromFile(image_file_path);
+
+		// name
+		name = path.filename().stem().string();
+
+		// size
+		size.x = img.getSize().x;
+		size.y = img.getSize().y;
+		
+		//data
+		size_t surface = size.x*size.y;
+		data.resize(surface);
+		const sf::Uint8 * pixel_ptr = img.getPixelsPtr();
+		for (size_t index = 0; index < surface; ++index) {
+			data[index] = pixel_ptr[index*4]==255 ? 0 : 1;
+		}
+	}
+	else {
+		std::cout << "Could not load model located in " << image_file_path << std::endl;
+	}
 }

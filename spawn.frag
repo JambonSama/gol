@@ -6,7 +6,7 @@ uniform float T;
 
 uniform int type;
 
-uniform vec2 model[128];
+uniform vec2 model[512];
 uniform int model_size;
 
 float rand(vec2 co){
