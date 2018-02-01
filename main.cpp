@@ -33,8 +33,16 @@ namespace {
     sf::RenderWindow win;
     const int GAME_W = 1000, GAME_H = 1000;
     sf::Sprite sprite;
-    sf::RenderTexture *tex1, *tex2;
-    sf::Texture init_tex;
+    sf::RenderTexture *tex1 = nullptr, *tex2 = nullptr;
+    sf::Texture *init_tex = nullptr;
+
+    const int PREVIEW_MAX_STEP = 20;
+    const int PREVIEW_W = 16, PREVIEW_H = 16;
+    sf::RenderTexture *preview_tex1, *preview_tex2;
+    sf::Sprite preview_sprite;
+    bool do_preview = true;
+    int preview_step = 0;
+    sf::View preview_view;
 
     std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
@@ -134,14 +142,16 @@ void init_world() {
         data[i*4 + 3] = 255;
     }
 
-    init_tex.update(data);
+    init_tex = new sf::Texture();
+    init_tex->update(data);
     delete [] data;
 
-    sprite.setTexture(init_tex);
+    sprite.setTexture(*init_tex);
 
     tex1->draw(sprite);
-
     run_update = false;
+    delete init_tex;
+    init_tex = nullptr;
 }
 
 void init() {
@@ -157,7 +167,9 @@ void init() {
         // (the "floating" title is used for tiling window managers to "float" the window)
         win.create(sf::VideoMode(800,800), "floating");
     }
-    init_tex.create(GAME_W, GAME_H);
+
+    init_tex = new sf::Texture();
+    init_tex->create(GAME_W, GAME_H);
 
     tex1 = new sf::RenderTexture();
     tex2 = new sf::RenderTexture();
@@ -203,11 +215,76 @@ void init() {
 
     default_view = win.getDefaultView();
 
+    preview_tex1 = new sf::RenderTexture();
+    preview_tex2 = new sf::RenderTexture();
+
+    preview_tex1->create(PREVIEW_W, PREVIEW_H);
+    preview_tex2->create(PREVIEW_W, PREVIEW_H);
+
+    delete init_tex;
+    init_tex = nullptr;
+
     init_models();
+
+}
+
+void start_preview() {
+    sf::Uint8* data = new sf::Uint8[PREVIEW_W*PREVIEW_H*4];
+    for(int i = 0; i < PREVIEW_W*PREVIEW_H; i++) {
+        data[i*4 + 0] = 255;
+        data[i*4 + 1] = 255;
+        data[i*4 + 2] = 255;
+        data[i*4 + 3] = 255;
+    }
+
+    init_tex = new sf::Texture();
+    init_tex->create(PREVIEW_W, PREVIEW_H);
+    init_tex->update(data);
+    delete [] data;
+
+    preview_view.reset({0,PREVIEW_H,PREVIEW_W, -PREVIEW_H});
+
+    preview_sprite.setTexture(*init_tex);
+    preview_sprite.setPosition(100,100);
+    preview_sprite.setScale(10, 10);
+
+    preview_tex1->setView(preview_view);
+    preview_tex1->draw(preview_sprite, &update_shader);
+
+    const auto& model = compiled_models[current_model];
+    spawn_shader.setUniformArray("model", model.data(), model.size());
+    spawn_shader.setUniform("model_size", (int)model.size());
+
+    spawn_shader.setUniform("type", (int)DRAW_MODEL);
+    sf::Vector2f spawn_preview = {PREVIEW_W/2, PREVIEW_H/2};
+    spawn_shader.setUniform("spawn", spawn_preview);
+    spawn_shader.setUniform("T", sfclock.getElapsedTime().asSeconds());
+
+    preview_sprite.setTexture(tex1->getTexture());
+    tex2->draw(preview_sprite, &spawn_shader);
+    std::swap(preview_tex1, preview_tex2);
+}
+
+void render_preview() {
+    if (do_preview) {
+        /*update_shader.setUniform("GAME_W", (float)PREVIEW_W);
+        update_shader.setUniform("GAME_H", (float)PREVIEW_H);
+
+        preview_sprite.setTexture(tex1->getTexture());
+        tex2->draw(preview_sprite, &update_shader);
+        std::swap(preview_tex1, preview_tex2);
+        preview_step = (preview_step + 1) % PREVIEW_MAX_STEP;
+        if(preview_step == 0) {
+            start_preview();
+        }*/
+        win.setView(default_view);
+        win.draw(preview_sprite);
+    }
 }
 
 void run() {
     sf::Event ev;
+    start_preview();
     while(win.isOpen()) {
 
         while(win.pollEvent(ev)) {
@@ -397,6 +474,8 @@ void run() {
         text.move(0,text.getCharacterSize());
         text.setString("N   : step");
         win.draw(text);
+
+        render_preview();
 
         win.display();
     }
