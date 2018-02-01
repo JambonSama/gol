@@ -1,5 +1,6 @@
 #version 130
-uniform sampler2D texture;
+uniform sampler2D texture; // used by SFML for sprite rendering
+uniform sampler2D spawn_texture;
 in vec2 pos;
 uniform vec2 spawn;
 uniform float T;
@@ -48,7 +49,7 @@ void main()
         }
     }
     else if (type == 4) {
-        bool had_pixel = false;
+        /*bool had_pixel = false;
         for(int i = 0; i < model_size; i++) {
             if (int(model[i].x + spawn.x) == int(pos.x) && int(model[i].y + spawn.y) == int(pos.y)) {
                 had_pixel = true;
@@ -60,7 +61,7 @@ void main()
         }
         else {
             gl_FragColor = pixel;
-        }
+        }*/
     }
     else {
         gl_FragColor = pixel;

@@ -306,6 +306,7 @@ void start_preview() {
     preview_sprite.setTexture(preview_tex1->getTexture());
     preview_tex2->draw(preview_sprite, &spawn_shader);
     std::swap(preview_tex1, preview_tex2);
+	
     delete [] data;
 }
 
