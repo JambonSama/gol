@@ -143,6 +143,7 @@ void init_world() {
     }
 
     init_tex = new sf::Texture();
+    init_tex->create(GAME_W, GAME_H);
     init_tex->update(data);
     delete [] data;
 
@@ -231,25 +232,29 @@ void init() {
 void start_preview() {
     sf::Uint8* data = new sf::Uint8[PREVIEW_W*PREVIEW_H*4];
     for(int i = 0; i < PREVIEW_W*PREVIEW_H; i++) {
-        data[i*4 + 0] = 255;
-        data[i*4 + 1] = 255;
-        data[i*4 + 2] = 255;
+        data[i*4 + 0] = 0;
+        data[i*4 + 1] = 0;
+        data[i*4 + 2] = 0;//255*(dis(gen)>128);
         data[i*4 + 3] = 255;
     }
 
     init_tex = new sf::Texture();
     init_tex->create(PREVIEW_W, PREVIEW_H);
     init_tex->update(data);
-    delete [] data;
+
 
     preview_view.reset({0,PREVIEW_H,PREVIEW_W, -PREVIEW_H});
 
     preview_sprite.setTexture(*init_tex);
-    preview_sprite.setPosition(100,100);
-    preview_sprite.setScale(10, 10);
+    preview_sprite.setPosition(0,0);
+    preview_sprite.setScale(1, 1);
 
     preview_tex1->setView(preview_view);
-    preview_tex1->draw(preview_sprite, &update_shader);
+    preview_tex2->setView(preview_view);
+
+    update_shader.setUniform("GAME_W", (float)GAME_W);
+    update_shader.setUniform("GAME_H", (float)GAME_H);
+    preview_tex1->draw(preview_sprite);
 
     const auto& model = compiled_models[current_model];
     spawn_shader.setUniformArray("model", model.data(), model.size());
@@ -260,25 +265,37 @@ void start_preview() {
     spawn_shader.setUniform("spawn", spawn_preview);
     spawn_shader.setUniform("T", sfclock.getElapsedTime().asSeconds());
 
-    preview_sprite.setTexture(tex1->getTexture());
-    tex2->draw(preview_sprite, &spawn_shader);
+    preview_sprite.setTexture(preview_tex1->getTexture());
+    preview_tex2->draw(preview_sprite, &spawn_shader);
     std::swap(preview_tex1, preview_tex2);
+    delete [] data;
 }
 
 void render_preview() {
     if (do_preview) {
-        /*update_shader.setUniform("GAME_W", (float)PREVIEW_W);
-        update_shader.setUniform("GAME_H", (float)PREVIEW_H);
 
-        preview_sprite.setTexture(tex1->getTexture());
-        tex2->draw(preview_sprite, &update_shader);
-        std::swap(preview_tex1, preview_tex2);
-        preview_step = (preview_step + 1) % PREVIEW_MAX_STEP;
-        if(preview_step == 0) {
+
+        //preview_step = (preview_step + 1) % PREVIEW_MAX_STEP;
+        preview_step++;
+        if(preview_step % (PREVIEW_MAX_STEP*10) == 0) {
             start_preview();
-        }*/
+        }
+        if(preview_step % 10 == 0) {
+            //start_preview();
+            update_shader.setUniform("GAME_W", (float)PREVIEW_W);
+            update_shader.setUniform("GAME_H", (float)PREVIEW_H);
+
+            preview_sprite.setPosition(0,0);
+            preview_sprite.setScale(1,1);
+            preview_sprite.setTexture(preview_tex1->getTexture());
+            preview_tex2->draw(preview_sprite, &update_shader);
+            std::swap(preview_tex1, preview_tex2);
+        }
+        preview_sprite.setTexture(preview_tex1->getTexture());
+        preview_sprite.setPosition(10,200);
+        preview_sprite.setScale(10,10);
         win.setView(default_view);
-        win.draw(preview_sprite);
+        win.draw(preview_sprite, &render_shader);
     }
 }
 
@@ -327,9 +344,11 @@ void run() {
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
                     if (ev.mouseWheel.x < 0) {
                         current_model = (current_model + 1) % models.size();
+                        start_preview();
                     }
                     else {
                         current_model = (current_model - 1) % models.size();
+                        start_preview();
                     }
                 }
                 else {
@@ -435,6 +454,7 @@ void run() {
         text.setString("4   : model");
         win.draw(text);
 
+        text.setFillColor(sf::Color::White);
         for(int i = 0; i < models.size(); i++) {
             if(current_model == i) {
                 text.setOutlineColor(sf::Color::Green);
