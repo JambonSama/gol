@@ -13,7 +13,9 @@ void main()
     for(int y = int(pos.y - 1); y <= pos.y + 1; ++y) {
         for (int x = int(pos.x - 1); x <= pos.x + 1; ++x) {
             if (x == int(pos.x) && y == int(pos.y)) continue;
-            vec2 uv = vec2(mod(float(x), GAME_W)/(GAME_W-1), mod(float(y), GAME_H)/(GAME_H-1));
+            int tx = x; if (tx >= int(GAME_W)-1) tx = 0; if (tx < 0) tx = int(GAME_W)-1;
+            int ty = y; if (ty >= int(GAME_H)-1) ty = 0; if (ty < 0) ty = int(GAME_H)-1;
+            vec2 uv = vec2(float(tx)/(GAME_W-1), float(ty)/(GAME_H-1));
             vec4 neigh = texture2D(texture, uv);
             if (neigh.b > 0.5) {
                 ++n;
