@@ -7,6 +7,15 @@
 #include <tuple>
 #include <string>
 
+#ifdef _WIN32
+// Choose the Nvidia card by default on optimus systems (only windows)
+#include <Windows.h>
+extern "C" {
+	_declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+}
+#endif
+
+
 //using namespace std;
 
 enum DRAW_TYPE {
@@ -31,7 +40,7 @@ namespace {
     const bool USE_GL45 = false; // do not use yet, doesn't work!
 
     sf::RenderWindow win;
-    const int GAME_W = 4096, GAME_H = 4096;
+    const int GAME_W = 1024, GAME_H = 1024;
     sf::Sprite sprite;
     sf::RenderTexture *tex1 = nullptr, *tex2 = nullptr;
     sf::Texture *init_tex = nullptr;
