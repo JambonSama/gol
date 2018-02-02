@@ -30,12 +30,13 @@ struct Size {
     int x,y;
 };
 
-struct ModelInfo {
+struct Model {
     std::string name;
     Size size;
     std::vector<unsigned char> data;
 
-	ModelInfo(const std::string & image_file_path);
+	Model(const std::string & image_file);
+	Model(const fs::path & image_file);
 };
 
 struct CompiledModel {
@@ -46,15 +47,20 @@ struct CompiledModel {
 
 std::vector<sf::Color> CompiledModel::temp_data;
 
+std::vector<Model> loadModels();
+
 namespace {
 	
     const bool USE_GL45 = false; // do not use yet, doesn't work!
 
     sf::RenderWindow win;
+	const std::string GAME_NAME = "GAMU OF LIFU";
     const int GAME_W = 1024, GAME_H = 1024;
     sf::Sprite sprite;
     sf::RenderTexture *tex1 = nullptr, *tex2 = nullptr;
     sf::Texture *init_tex = nullptr;
+
+	const float MENU_W = 250.0;
 
 	const int PREVIEW_SCALE = 5;
     const int PREVIEW_MAX_STEP = 20;
@@ -98,59 +104,17 @@ namespace {
     sf::Text text;
     sf::RectangleShape text_bg;
 
-    const int MAX_MODEL_SIZE = 2^9; // CHECK WITH SHADER!!
 
-    // max 32 (MAX_MODEL_SIZE) ones (1) in the model definition
+    // max (MAX_MODEL_SIZE) ones (1) in the model definition
     // (or change the size of the "model[32]" array in the spawn.frag shader)
-	const std::vector<ModelInfo> models = { ModelInfo("models/ship 1.png"), ModelInfo("models/ship 2.png") };
-		//= {
-  //      // name, size, data
-  //      {"glider 1", {4,3},{
-		//	0,0,1,0,
-		//	0,0,0,1,
-		//	0,1,1,1
-  //      }},
-  //      {"glider 2", {4,3},{
-		//	0,1,1,1,
-		//	0,0,0,1,
-		//	0,0,1,0
-  //      }},
-		//{"puffer 1", {5,19},{
-		//	0,1,1,1,1,
-		//	1,0,0,0,1,
-		//	0,0,0,0,1,
-		//	1,0,0,1,0,
-		//	0,0,0,0,0,
-		//	0,0,0,0,0,
-		//	0,1,0,0,0,
-		//	0,0,1,0,0,
-		//	0,0,1,0,0,
-		//	0,1,1,0,0,
-		//	1,0,0,0,0,
-		//	0,0,0,0,0,
-		//	0,0,0,0,0,
-		//	0,0,0,0,0,
-		//	0,1,1,1,1,
-		//	1,0,0,0,1,
-		//	0,0,0,0,1,
-		//	1,0,0,1,0,
-		//	0,0,0,0,0
-		//}},
-		//{"diag puffer 1", {5,5},{
-		//	1,1,1,0,1,
-		//	1,0,0,0,0,
-		//	0,0,0,1,1,
-		//	0,1,1,0,1,
-		//	1,0,1,0,1
-		//}}
-  //  };
+	std::vector<Model> models = loadModels();
 
     //std::vector<std::vector<sf::Vector2f>> compiled_models;
 	std::vector<CompiledModel> compiled_models;
 }
 
 void init_models() {
-    for(const ModelInfo& entry: models) {
+    for(const Model& entry: models) {
         printf("compiling model '%s' : ", entry.name.c_str());
 
 		compiled_models.push_back({});
@@ -213,10 +177,10 @@ void init() {
         settings.minorVersion = 5;
         settings.attributeFlags = sf::ContextSettings::Core;
         settings.depthBits = 0;
-        win.create(sf::VideoMode(800,800),"floating", sf::Style::Default, settings);
+        win.create(sf::VideoMode(800,800), GAME_NAME, sf::Style::Default, settings);
     } else {
         // (the "floating" title is used for tiling window managers to "float" the window)
-        win.create(sf::VideoMode(800,800), "floating");
+        win.create(sf::VideoMode(800,800), GAME_NAME);
     }
 
     init_tex = new sf::Texture();
@@ -260,7 +224,7 @@ void init() {
     text.setCharacterSize(14);
 
 
-	text_bg.setSize({ 150.0, (float)(text.getCharacterSize()*(DRAW__COUNT + models.size() + 3)) });
+	text_bg.setSize({ MENU_W, (float)(text.getCharacterSize()*(DRAW__COUNT + models.size() + 3)) });
     text_bg.setPosition(0,0);
     text_bg.setFillColor(sf::Color(128,128,128, 240));
 
@@ -562,29 +526,44 @@ int main() {
     return 0;
 }
 
-ModelInfo::ModelInfo(const std::string & image_file_path) {
-	fs::path path = image_file_path;
-	if (fs::exists(path)) {
+Model::Model(const std::string & image_file) {
+	Model(fs::path(image_file));
+}
+
+Model::Model(const fs::path & image_file){
+	if (fs::exists(image_file)) {
 		// loading image
 		sf::Image img;
-		img.loadFromFile(image_file_path);
+		img.loadFromFile(image_file.string());
 
 		// name
-		name = path.filename().stem().string();
+		name = image_file.filename().stem().string();
 
 		// size
 		size.x = img.getSize().x;
 		size.y = img.getSize().y;
-		
+
 		//data
 		size_t surface = size.x*size.y;
 		data.resize(surface);
 		const sf::Uint8 * pixel_ptr = img.getPixelsPtr();
 		for (size_t index = 0; index < surface; ++index) {
-			data[index] = pixel_ptr[index*4]==255 ? 0 : 1;
+			data[index] = pixel_ptr[index * 4] == 255 ? 0 : 1;
 		}
 	}
 	else {
-		std::cout << "Could not load model located in " << image_file_path << std::endl;
+		std::cout << "Could not load model located in " << image_file << std::endl;
 	}
+}
+
+std::vector<Model> loadModels() {
+	std::vector<Model> models;
+	fs::path model_path("models");
+	for (auto & model_file : fs::directory_iterator(model_path)) {
+		if (fs::is_regular_file(model_file.path()) && (model_file.path().extension() == ".png" || model_file.path().extension() == ".jpg")) {
+			models.push_back(Model(model_file.path()));
+		}
+	}
+
+	return models;
 }
