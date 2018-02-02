@@ -45,6 +45,24 @@ struct CompiledModel {
 	bool good = false;
 };
 
+// defined CCW
+enum class Rotation {
+	RIGHT,
+	UP,
+	LEFT,
+	DOWN
+};
+
+void operator++(Rotation& r) {
+	if (r == Rotation::DOWN) r = Rotation::RIGHT;
+	else r = (Rotation)((int)r + 1);
+}
+
+void operator--(Rotation& r) {
+	if (r == Rotation::RIGHT) r = Rotation::DOWN;
+	else r = (Rotation)((int)r - 1);
+}
+
 std::vector<sf::Color> CompiledModel::temp_data;
 
 std::vector<Model> loadModels();
@@ -71,9 +89,11 @@ namespace {
     const int PREVIEW_W = 16, PREVIEW_H = 16;
     sf::RenderTexture *preview_tex1, *preview_tex2;
     sf::Sprite preview_sprite;
-    bool do_preview = true;
+    bool do_preview = false;
     int preview_step = 0;
     sf::View preview_view;
+
+	Rotation spawn_rotation = Rotation::RIGHT; // default rotation = 0°
 
     std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
@@ -115,6 +135,10 @@ namespace {
 
     //std::vector<std::vector<sf::Vector2f>> compiled_models;
 	std::vector<CompiledModel> compiled_models;
+
+	const std::string ROTATION_STR[] = { "right", "up", "left", "down" };
+
+	char buffer[256] = { 0 };
 }
 
 void init_models() {
@@ -338,7 +362,7 @@ void run() {
                     do_update = true;
                     run_update = false;
                     break;
-                case sf::Keyboard::Q:
+                case sf::Keyboard::Escape:
                     win.close();
                     break;
                 case sf::Keyboard::Space:
@@ -359,6 +383,13 @@ void run() {
                 case sf::Keyboard::Num4:
                     draw_type = DRAW_MODEL;
                     break;
+
+				case sf::Keyboard::Q: //rotate CCW
+					++spawn_rotation;
+					break;
+				case sf::Keyboard::E: // rotate CW
+					--spawn_rotation;
+					break;
                 default:
                     break;
                 }
@@ -432,6 +463,7 @@ void run() {
 
 				const CompiledModel& model = compiled_models[current_model];
 				spawn_shader.setUniform("spawn_texture", model.tex);
+				spawn_shader.setUniform("spawn_rotation", (int)spawn_rotation);
 				sf::Vector2f model_size = sf::Vector2f(model.tex.getSize());
 				spawn_shader.setUniform("model_size", model_size);
 				printf("model size = %dx%d\n", (int)model_size.x, (int)model_size.y);
@@ -458,7 +490,7 @@ void run() {
 
         sprite.setTexture(tex1->getTexture());
         win.setView(render_view);
-        win.clear();
+        win.clear(sf::Color(20,20,20,255));
         win.draw(sprite, &render_shader);
 
 
@@ -514,6 +546,13 @@ void run() {
         }
         text.move(0,text.getCharacterSize());
         win.draw(text);
+
+		text.setFillColor(sf::Color::White);
+		text.move(0, text.getCharacterSize());
+		
+		sprintf(buffer, "rotation : %s", ROTATION_STR[(int)spawn_rotation].c_str());
+		text.setString(buffer);
+		win.draw(text);
 
         text.setFillColor(sf::Color::White);
         text.move(0,text.getCharacterSize());
