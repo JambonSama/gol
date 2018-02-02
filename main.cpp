@@ -54,7 +54,11 @@ namespace {
     const bool USE_GL45 = false; // do not use yet, doesn't work!
 
     sf::RenderWindow win;
+#ifdef PETER_LINUX
+    const std::string GAME_NAME = "floating";
+#else
 	const std::string GAME_NAME = "GAMU OF LIFU";
+#endif
     const int GAME_W = 1024, GAME_H = 1024;
     sf::Sprite sprite;
     sf::RenderTexture *tex1 = nullptr, *tex2 = nullptr;
