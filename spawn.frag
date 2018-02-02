@@ -52,9 +52,9 @@ void main()
         
         // if the current pixel corresponds to an alive cell in the spawn texture,
         // turn it alive
-        vec2 spawn_uv = (pos - spawn)/model_size;
+        vec2 spawn_uv = vec2( (pos.x + model_size.x/2.0 - spawn.x)/model_size.x, (pos.y + model_size.y/2.0 - spawn.y)/model_size.y);
         vec4 spawn_pixel = texture2D(spawn_texture, spawn_uv);
-        if (spawn_pixel.b > 0.5) {
+        if (spawn_pixel.b > 0.5 && spawn_uv.x >= 0 && spawn_uv.y >= 0 && spawn_uv.x <= 1 && spawn_uv.y <= 1) {
             gl_FragColor = vec4(pixel.rg, 1, 1);
         }
         else {

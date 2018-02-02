@@ -125,21 +125,27 @@ void init_models() {
             continue;
         }
 
-        int x = 0, y = 0;
-        //std::vector<sf::Vector2f> compiled_model;
+
+		// create black borders for the texture
+        
 		CompiledModel::temp_data.reserve(entry.data.size());
 		CompiledModel::temp_data.clear();
 		CompiledModel &compiled_model = compiled_models.back();
+
+		
+		
 		
 		for (int y = 0; y < entry.size.y; y++) {
 			for (int x = 0; x < entry.size.x; x++) {
-				const int n = x + y * entry.size.y;
+				const int n = x + y * entry.size.x;
 				CompiledModel::temp_data.push_back(sf::Color(0,0,entry.data[n]*255, 255));
 			}
 		}
 
 		compiled_model.tex.create(entry.size.x, entry.size.y);
 		compiled_model.tex.update(reinterpret_cast<sf::Uint8*>(CompiledModel::temp_data.data()));
+		
+		//compiled_model.tex.setRepeated(true);
 		
 		compiled_model.good = true;
         printf("OK\n");
@@ -424,6 +430,7 @@ void run() {
 				spawn_shader.setUniform("spawn_texture", model.tex);
 				sf::Vector2f model_size = sf::Vector2f(model.tex.getSize());
 				spawn_shader.setUniform("model_size", model_size);
+				printf("model size = %dx%d\n", (int)model_size.x, (int)model_size.y);
 				do_spawn = false;
             }
             spawn_shader.setUniform("type", (int)draw_type);
