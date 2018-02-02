@@ -1,14 +1,14 @@
 #version 130
 uniform sampler2D texture; // used by SFML for sprite rendering
 uniform sampler2D spawn_texture;
-in vec2 pos;
+uniform vec2 model_size;
 uniform vec2 spawn;
+
+in vec2 pos;
+
 uniform float T;
 
 uniform int type;
-
-uniform vec2 model[512];
-uniform int model_size;
 
 float rand(vec2 co){
     return fract(T*sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
@@ -49,19 +49,17 @@ void main()
         }
     }
     else if (type == 4) {
-        /*bool had_pixel = false;
-        for(int i = 0; i < model_size; i++) {
-            if (int(model[i].x + spawn.x) == int(pos.x) && int(model[i].y + spawn.y) == int(pos.y)) {
-                had_pixel = true;
-                break;
-            }
-        }
-        if (had_pixel) {
+        
+        // if the current pixel corresponds to an alive cell in the spawn texture,
+        // turn it alive
+        vec2 spawn_uv = (pos - spawn)/model_size;
+        vec4 spawn_pixel = texture2D(spawn_texture, spawn_uv);
+        if (spawn_pixel.b > 0.5) {
             gl_FragColor = vec4(pixel.rg, 1, 1);
         }
         else {
-            gl_FragColor = pixel;
-        }*/
+            gl_FragColor = pixel;   
+        }
     }
     else {
         gl_FragColor = pixel;

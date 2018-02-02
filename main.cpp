@@ -33,12 +33,21 @@ struct Size {
 struct ModelInfo {
     std::string name;
     Size size;
-    std::vector<char> data;
+    std::vector<unsigned char> data;
 
 	ModelInfo(const std::string & image_file_path);
 };
 
+struct CompiledModel {
+	static std::vector<sf::Color> temp_data;
+	sf::Texture tex;
+	bool good = false;
+};
+
+std::vector<sf::Color> CompiledModel::temp_data;
+
 namespace {
+	
     const bool USE_GL45 = false; // do not use yet, doesn't work!
 
     sf::RenderWindow win;
@@ -136,40 +145,40 @@ namespace {
 		//}}
   //  };
 
-    std::vector<std::vector<sf::Vector2f>> compiled_models;
+    //std::vector<std::vector<sf::Vector2f>> compiled_models;
+	std::vector<CompiledModel> compiled_models;
 }
 
 void init_models() {
     for(const ModelInfo& entry: models) {
         printf("compiling model '%s' : ", entry.name.c_str());
 
+		compiled_models.push_back({});
+
         if (entry.data.size() != entry.size.x*entry.size.y) {
-            printf("ERROR (skipping model): Wrong model size: %d != %dx%d\n", entry.data.size(), entry.size.x, entry.size.y);
-            compiled_models.push_back({}); // push an empty vector so we don't mess up indices
+            printf("ERROR (skipping model): Wrong model size: %Lu != %dx%d\n", entry.data.size(), entry.size.x, entry.size.y);
+            
             continue;
         }
 
         int x = 0, y = 0;
-        std::vector<sf::Vector2f> compiled_model;
-        for(int n = 0; n < entry.data.size(); n++) {
-            if (entry.data[n] == 1) {
-                compiled_model.push_back({(float)x,(float)y});
-            }
+        //std::vector<sf::Vector2f> compiled_model;
+		CompiledModel::temp_data.reserve(entry.data.size());
+		CompiledModel::temp_data.clear();
+		CompiledModel &compiled_model = compiled_models.back();
+		
+		for (int y = 0; y < entry.size.y; y++) {
+			for (int x = 0; x < entry.size.x; x++) {
+				const int n = x + y * entry.size.y;
+				CompiledModel::temp_data.push_back(sf::Color(0,0,entry.data[n]*255, 255));
+			}
+		}
 
-            if (x == entry.size.x - 1) {
-                x = 0;
-                y++;
-            } else {
-                x++;
-            }
-        }
-        if (compiled_model.size() > MAX_MODEL_SIZE) {
-            printf("ERROR (skipping model): Too many points : %d > %d\n", compiled_model.size(), MAX_MODEL_SIZE);
-            compiled_models.push_back({});
-            continue;
-        }
-        compiled_models.push_back(compiled_model);
-        printf("%d points\n", compiled_model.size());
+		compiled_model.tex.create(entry.size.x, entry.size.y);
+		compiled_model.tex.update(reinterpret_cast<sf::Uint8*>(CompiledModel::temp_data.data()));
+		
+		compiled_model.good = true;
+        printf("OK\n");
     }
 }
 
@@ -275,7 +284,7 @@ void start_preview() {
     for(int i = 0; i < PREVIEW_W*PREVIEW_H; i++) {
         data[i*4 + 0] = 0;
         data[i*4 + 1] = 0;
-        data[i*4 + 2] = 0;//255*(dis(gen)>128);
+        data[i*4 + 2] = 255*(dis(gen)>128);
         data[i*4 + 3] = 255;
     }
 
@@ -293,11 +302,9 @@ void start_preview() {
     preview_tex1->setView(preview_view);
     preview_tex2->setView(preview_view);
 
-    update_shader.setUniform("GAME_W", (float)GAME_W);
-    update_shader.setUniform("GAME_H", (float)GAME_H);
     preview_tex1->draw(preview_sprite);
 
-    const auto& model = compiled_models[current_model];
+   /* const auto& model = compiled_models[current_model];
     spawn_shader.setUniformArray("model", model.data(), model.size());
     spawn_shader.setUniform("model_size", (int)model.size());
 
@@ -308,7 +315,7 @@ void start_preview() {
 
     preview_sprite.setTexture(preview_tex1->getTexture());
     preview_tex2->draw(preview_sprite, &spawn_shader);
-    std::swap(preview_tex1, preview_tex2);
+    std::swap(preview_tex1, preview_tex2);*/
 	
     delete [] data;
 }
@@ -322,17 +329,17 @@ void render_preview() {
         if(preview_step % (PREVIEW_MAX_STEP*10) == 0) {
             start_preview();
         }
-        if(preview_step % 10 == 0) {
-            //start_preview();
-            update_shader.setUniform("GAME_W", (float)PREVIEW_W);
-            update_shader.setUniform("GAME_H", (float)PREVIEW_H);
+        //if(preview_step % 10 == 0) {
+        //    //start_preview();
+        //    update_shader.setUniform("GAME_W", (float)PREVIEW_W);
+        //    update_shader.setUniform("GAME_H", (float)PREVIEW_H);
 
-            preview_sprite.setPosition(0,0);
-            preview_sprite.setScale(1,1);
-            preview_sprite.setTexture(preview_tex1->getTexture());
-            preview_tex2->draw(preview_sprite, &update_shader);
-            std::swap(preview_tex1, preview_tex2);
-        }
+        //    preview_sprite.setPosition(0,0);
+        //    preview_sprite.setScale(1,1);
+        //    preview_sprite.setTexture(preview_tex1->getTexture());
+        //    preview_tex2->draw(preview_sprite, &update_shader);
+        //    std::swap(preview_tex1, preview_tex2);
+        //}
         preview_sprite.setTexture(preview_tex1->getTexture());
         preview_sprite.setPosition(10,200);
         preview_sprite.setScale(PREVIEW_SCALE, PREVIEW_SCALE);
@@ -444,10 +451,16 @@ void run() {
         if (do_spawn) {
 
             if (draw_type == DRAW_MODEL) {
-                const auto& model = compiled_models[current_model];
+                /*const auto& model = compiled_models[current_model];
                 spawn_shader.setUniformArray("model", model.data(), model.size());
                 spawn_shader.setUniform("model_size", (int)model.size());
-                do_spawn = false;
+                do_spawn = false;*/
+
+				const CompiledModel& model = compiled_models[current_model];
+				spawn_shader.setUniform("spawn_texture", model.tex);
+				sf::Vector2f model_size = sf::Vector2f(model.tex.getSize());
+				spawn_shader.setUniform("model_size", model_size);
+				do_spawn = false;
             }
             spawn_shader.setUniform("type", (int)draw_type);
             spawn_shader.setUniform("spawn", spawn_pos);
@@ -505,7 +518,7 @@ void run() {
             else {
                 text.setOutlineThickness(0);
             }
-            if(compiled_models[i].empty()) text.setFillColor(sf::Color::Red);
+            if(!compiled_models[i].good) text.setFillColor(sf::Color::Red);
             text.move(0,text.getCharacterSize());
             char buffer[32];
             sprintf(buffer, "  %s", models[i].name.c_str());
