@@ -6,9 +6,9 @@
 #include <map>
 #include <tuple>
 #include <string>
-#include <experimental/filesystem>
+#include <filesystem>
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 #ifdef _WIN32
 // Choose the Nvidia card by default on optimus systems (only windows)
@@ -252,8 +252,9 @@ void init() {
         spawn_shader.loadFromFile("shaders/update.vert", "shaders/spawn.frag");
     }
 
-
-    font.loadFromFile("fonts/Inconsolata-Regular.ttf");
+    if (!font.loadFromFile("fonts/Inconsolata-Regular.ttf")) {
+        std::cout << "Failed to load font!" << std::endl;
+    }
     text.setFont(font);
     text.setCharacterSize(14);
 
