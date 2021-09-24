@@ -93,7 +93,7 @@ namespace {
     int preview_step = 0;
     sf::View preview_view;
 
-	Rotation spawn_rotation = Rotation::RIGHT; // default rotation = 0�
+	Rotation spawn_rotation = Rotation::RIGHT; // default rotation = 0°
 
     std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
