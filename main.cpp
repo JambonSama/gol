@@ -6,9 +6,9 @@
 #include <map>
 #include <tuple>
 #include <string>
-#include <experimental/filesystem>
+#include <filesystem>
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 #ifdef _WIN32
 // Choose the Nvidia card by default on optimus systems (only windows)
@@ -93,7 +93,7 @@ namespace {
     int preview_step = 0;
     sf::View preview_view;
 
-	Rotation spawn_rotation = Rotation::RIGHT; // default rotation = 0°
+	Rotation spawn_rotation = Rotation::RIGHT; // default rotation = 0Â°
 
     std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
@@ -247,13 +247,14 @@ void init() {
         //render_shader.loadFromFile("update_45.vert", "render_45.frag");
     }
     else {
-        update_shader.loadFromFile("update.vert", "update.frag");
-        render_shader.loadFromFile("update.vert", "render.frag");
-        spawn_shader.loadFromFile("update.vert", "spawn.frag");
+        update_shader.loadFromFile("shaders/update.vert", "shaders/update.frag");
+        render_shader.loadFromFile("shaders/update.vert", "shaders/render.frag");
+        spawn_shader.loadFromFile("shaders/update.vert", "shaders/spawn.frag");
     }
 
-
-    font.loadFromFile("fonts/Inconsolata-Regular.ttf");
+    if (!font.loadFromFile("fonts/Inconsolata-Regular.ttf")) {
+        std::cout << "Failed to load font!" << std::endl;
+    }
     text.setFont(font);
     text.setCharacterSize(14);
 

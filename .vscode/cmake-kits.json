@@ -1,0 +1,12 @@
+[
+    {
+        "name": "vcpkg ninja",
+        "toolchainFile": "${workspaceFolder}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "preferredGenerator": {
+            "name": "Ninja"
+        },
+        "environmentVariables": {
+            "VCPKG_FEATURE_FLAGS": "versions"
+        }
+    }
+]

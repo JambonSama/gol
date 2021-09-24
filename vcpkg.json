@@ -1,0 +1,16 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
+    "name": "gol",
+    "version": "1.0",
+    "builtin-baseline": "7a9bfb28d35586bc02c0a96e190fe74d25445b47",
+    "dependencies": [
+        "freetype",
+        "sfml"
+    ],
+    "overrides": [
+        {
+          "name": "freetype",
+          "version": "2.10.0"
+        }
+      ]
+}
